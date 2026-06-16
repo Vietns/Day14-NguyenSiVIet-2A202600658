@@ -205,6 +205,25 @@ class RAGASEvaluator:
         expected_tokens = _tokenize(expected)
         return _overlap_score(answer_tokens, expected_tokens)
 
+    def evaluate_answer_conciseness(
+        self,
+        answer: str,
+        ideal_max_tokens: int = 40,
+        hard_max_tokens: int = 80,
+    ) -> float:
+        """Custom bonus metric: reward answers that are useful without being bloated.
+
+        Score is 1.0 when the answer length is at or below ideal_max_tokens.
+        It decreases linearly after that and reaches 0.0 at hard_max_tokens.
+        This catches verbosity bias that the three core metrics do not measure.
+        """
+        token_count = len(re.findall(r"\b\w+\b", answer))
+        if token_count <= ideal_max_tokens:
+            return 1.0
+        if token_count >= hard_max_tokens:
+            return 0.0
+        return _clamp(1.0 - ((token_count - ideal_max_tokens) / (hard_max_tokens - ideal_max_tokens)))
+
     # -----------------------------------------------------------------------
     # Task 2b — Retrieval-side metrics (evaluate the GET-CONTEXT step)
     # -----------------------------------------------------------------------

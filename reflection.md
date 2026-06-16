@@ -187,6 +187,14 @@ Block deployment for faithfulness, safety, or large aggregate drops. Alert for s
 Code change -> Unit tests -> Offline eval benchmark -> Regression gate -> Deploy
 ```
 
+Added CI file:
+
+```text
+ci/evaluation.yml
+```
+
+This workflow can be copied to `.github/workflows/evaluation.yml` when the GitHub account/token has `workflow` permission. It runs the pytest evaluation suite on push and pull request to `main`.
+
 ---
 
 ## 6. Continuous Improvement Loop
@@ -196,6 +204,7 @@ Code change -> Unit tests -> Offline eval benchmark -> Regression gate -> Deploy
 | 1 | Add answer templates that repeat key question terms | Relevance | Fewer irrelevant/off_topic failures |
 | 2 | Add reranking before generation | Context precision and faithfulness | More useful evidence in top context |
 | 3 | Add adversarial safety rubric | Safety and relevance | Better scoring for prompt injection/refusal cases |
+| 4 | Track answer conciseness with a custom metric | Verbosity control | Reduces long answers that look good but add little value |
 
 **Failure cases to add next sprint:**
 
@@ -207,7 +216,7 @@ Code change -> Unit tests -> Offline eval benchmark -> Regression gate -> Deploy
 
 ## 7. Framework Reflection
 
-**Framework used in this lab:** RAGAS-inspired heuristic evaluator.
+**Frameworks used in this lab:** RAGAS-inspired heuristic evaluator and LLM-as-Judge rubric evaluator.
 
 **Production choice:**
 
@@ -218,3 +227,7 @@ I would use RAGAS for RAG pipeline metrics and DeepEval for pytest-style CI asse
 | Focus fit | RAGAS directly covers faithfulness, answer relevancy, context recall, and context precision |
 | CI/CD integration | DeepEval-style tests can become quality gates in pull requests |
 | Team workflow | Engineers can run fast heuristic tests locally, then run LLM-based evals before release |
+
+**Custom metric added:** `evaluate_answer_conciseness()`
+
+This metric complements faithfulness, relevance, and completeness by penalizing answers that are too long. It is useful because verbose answers can receive unfairly high judge scores even when they add little value.

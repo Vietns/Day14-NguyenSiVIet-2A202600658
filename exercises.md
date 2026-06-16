@@ -225,6 +225,68 @@ Recommended precision pipeline: retrieve top-50 with hybrid search, apply metada
 
 ---
 
+## Bonus
+
+### Bonus 1 - Run 2 Evaluation Frameworks on the Same Dataset
+
+I compared two framework-style evaluators on the same 20-item golden dataset:
+
+1. **RAGAS-inspired heuristic evaluator** from `RAGASEvaluator`
+2. **LLM-as-Judge rubric evaluator** from `LLMJudge` using a deterministic mock judge
+
+| Metric / Dimension | RAGAS-inspired Heuristic | LLM-as-Judge Rubric | Insight |
+|--------------------|-------------------------:|--------------------:|---------|
+| Faithfulness / Grounding | 0.668 | 0.700 | Both detect that grounding is acceptable but not strong |
+| Relevance | 0.410 | 0.550 | LLM judge is less harsh because it can credit paraphrases |
+| Completeness | 0.664 | 0.650 | Both show answers are often partially complete |
+| Overall | 0.580 | 0.633 | Rubric judging is more semantic; overlap scoring is stricter on wording |
+
+Conclusion: the heuristic evaluator is fast and deterministic for CI smoke tests, while LLM-as-Judge is better for semantic quality review. In production, I would use both: heuristic checks on every commit and LLM judge on release candidates.
+
+### Bonus 2 - CI/CD Integration
+
+Added CI workflow script:
+
+```text
+ci/evaluation.yml
+```
+
+To enable it as a real GitHub Actions workflow, copy it to `.github/workflows/evaluation.yml` using a GitHub token/account with `workflow` permission. The workflow runs on push and pull request to `main`:
+
+```bash
+python -m pytest tests/ -v
+```
+
+with:
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+```
+
+This makes the evaluation pipeline a quality gate. If the tests fail, the pull request should not be merged.
+
+### Bonus 3 - Custom Metric
+
+Added custom metric:
+
+```python
+RAGASEvaluator.evaluate_answer_conciseness(answer, ideal_max_tokens=40, hard_max_tokens=80)
+```
+
+Purpose: detect overly verbose answers, which the three base metrics do not measure.
+
+Scoring:
+
+| Answer Length | Score |
+|---------------|------:|
+| <= 40 tokens | 1.0 |
+| 40-80 tokens | Linear decay |
+| >= 80 tokens | 0.0 |
+
+Why it matters: LLM-as-Judge can have verbosity bias, so a conciseness metric helps ensure answers are useful without being unnecessarily long.
+
+---
+
 ## Submission Checklist
 
 - [x] All tests pass: `pytest tests/ -v` with plugin autoload disabled
@@ -236,3 +298,6 @@ Recommended precision pipeline: retrieve top-50 with hybrid search, apply metada
 - [x] Golden dataset 20 QA completed
 - [x] Reflection written
 - [x] `solution/solution.py` copied
+- [x] Bonus: 2 framework comparison completed
+- [x] Bonus: CI/CD workflow added
+- [x] Bonus: custom conciseness metric added
